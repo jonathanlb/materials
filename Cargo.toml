@@ -1,0 +1,19 @@
+[package]
+name = "materials"
+version = "0.1.0"
+authors = ["Jonathan Bredin <bredin@acm.org>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+# normal = { git = "https://github.com/jonathanlb/normal" }
+normal = { path = "..//normal" }
+rocket = "0.4.5"
+rocket_contrib = "0.4.5"
+serde = "1.0.116"
+sqlite = "0.25.3"
+structopt = "0.3.17"
+
+[dev-dependencies]
+tempfile = "3.1.0"
