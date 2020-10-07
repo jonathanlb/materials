@@ -2,9 +2,6 @@
 
 use normal::{IdPairs, Normal};
 #[macro_use] extern crate rocket;
-use rocket::State;
-use rocket_contrib::json::Json;
-use serde::ser::{Serialize, Serializer, SerializeStruct};
 
 const FILE_TAB: &str = "files";
 const FILE_COL: &str = "name";
@@ -29,11 +26,6 @@ const NOTE_KEY_LEFT_COL: &str = "note";
 const NOTE_KEY_RIGHT_COL: &str = "keyword";
 
 const UNKNOWN_URL: String = String::new();
-
-trait MaterialsDb {
-    fn files(&self) -> Box<Normal>;
-    fn keywords(&self) -> Box<Normal>;
-}
 
 struct MaterialsConfig<'a> {
     db_file: &'a str,
@@ -83,87 +75,26 @@ macro_rules! page_iter {
     };
 }
 
-#[get("/<key_id>")]
-fn get_keyword(key_id: i64, db: State<MaterialsConfig>) -> String {
-    db.keywords().get(key_id).unwrap()
-}
+mod keywords;
+use crate::keywords::{
+    static_rocket_route_info_for_get_keyword, 
+    static_rocket_route_info_for_search_keywords
+};
 
-#[get("/search/<key_search>/<page_size>/<page_num>")]
-fn search_keywords<'a>(key_search: String, page_size: usize, page_num: usize, db: State<MaterialsConfig>) -> Json<Vec<i64>> {
-    let norm = db.keywords();
-    let i = norm.search(key_search.as_str()).unwrap();
-    Json(page_iter!(i, page_size, page_num))
-}
+mod materials;
+use crate::materials::{
+    static_rocket_route_info_for_get_material,
+    static_rocket_route_info_for_search_materials,
+    static_rocket_route_info_for_search_materials_by_keyword,
+    static_rocket_route_info_for_search_materials_by_note
+};
 
-struct MaterialDescriptor {
-    id: i64,
-    name: String,
-    url: String,
-}
-
-impl Serialize for MaterialDescriptor {
-    fn serialize<S>(&self, s: S) -> Result<S::Ok, S::Error>
-    where S: Serializer
-    {
-        let mut state = s.serialize_struct("MaterialDescriptor", 3)?;
-        state.serialize_field("id", &self.id)?;
-        state.serialize_field("name", &self.name)?;
-        state.serialize_field("url", &self.url)?;
-        state.end()
-    }
-}
-
-#[get("/<key_id>")]
-fn get_material(key_id: i64, db: State<MaterialsConfig>) -> Json<MaterialDescriptor> {
-    let f = db.files();
-    let name = f.get(key_id).unwrap();
-    let url = f.get_nonkey(key_id, FILE_URL_COL).unwrap_or(UNKNOWN_URL);
-    Json(MaterialDescriptor{
-        id: key_id,
-        name: name,
-        url: url,
-    })
-}
-
-#[get("/search/<key_search>/<page_size>/<page_num>")]
-fn search_materials<'a>(key_search: String, page_size: usize, page_num: usize, db: State<MaterialsConfig>) -> Json<Vec<i64>> {
-    let f = db.files();
-    let i = f.search(key_search.as_str()).unwrap();
-    Json(page_iter!(i, page_size, page_num))
-}
-
-#[get("/keyword/<key_id>/<page_size>/<page_num>")]
-fn search_materials_by_keyword<'a>(key_id: i64, page_size: usize, page_num: usize, db: State<MaterialsConfig>) -> Json<Vec<i64>> {
-    let fxk = db.file_keyword_pairs();
-    let i = fxk.invert(key_id).unwrap();
-    Json(page_iter!(i, page_size, page_num))
-}
-
-#[get("/note/<note_id>/<page_size>/<page_num>")]
-fn search_materials_by_note<'a>(note_id: i64, page_size: usize, page_num: usize, db: State<MaterialsConfig>) -> Json<Vec<i64>> {
-    let fxn = db.file_note_pairs();
-    let i = fxn.invert(note_id).unwrap();
-    Json(page_iter!(i, page_size, page_num))
-}
-
-#[get("/<note_id>")]
-fn get_note(note_id: i64, db: State<MaterialsConfig>) -> String {
-    db.notes().get(note_id).unwrap()
-}
-
-#[get("/search/<note_search>/<page_size>/<page_num>")]
-fn search_notes<'a>(note_search: String, page_size: usize, page_num: usize, db: State<MaterialsConfig>) -> Json<Vec<i64>> {
-    let norm = db.notes();
-    let i = norm.search(note_search.as_str()).unwrap();
-    Json(page_iter!(i, page_size, page_num))
-}
-
-#[get("/keyword/<key_id>/<page_size>/<page_num>")]
-fn search_notes_by_keyword<'a>(key_id: i64, page_size: usize, page_num: usize, db: State<MaterialsConfig>) -> Json<Vec<i64>> {
-    let nxk = db.note_keyword_pairs();
-    let i = nxk.invert(key_id).unwrap();
-    Json(page_iter!(i, page_size, page_num))
-}
+mod notes;
+use crate::notes::{
+    static_rocket_route_info_for_get_note,
+    static_rocket_route_info_for_search_notes,
+    static_rocket_route_info_for_search_notes_by_keyword
+};
 
 fn main() {
     let config = MaterialsConfig{
