@@ -26,16 +26,32 @@ impl Serialize for MaterialDescriptor {
     }
 }
 
-#[get("/<key_id>")]
-pub(crate) fn get_material(key_id: i64, db: State<MaterialsConfig>) -> Json<MaterialDescriptor> {
+#[get("/keywords/<mat_id>")]
+pub(crate) fn get_keywords(mat_id: i64, db: State<MaterialsConfig>) -> Json<Vec<i64>> {
+    let fxk = db.file_keyword_pairs();
+    let keys = fxk.get(mat_id).unwrap();
+    Json(keys.collect())
+}
+
+#[get("/<mat_id>")]
+pub(crate) fn get_material(mat_id: i64, db: State<MaterialsConfig>) -> Json<MaterialDescriptor> {
     let f = db.files();
-    let name = f.get(key_id).unwrap();
-    let url = f.get_nonkey(key_id, FILE_URL_COL).unwrap_or(UNKNOWN_URL);
+    let name = f.get(mat_id).unwrap();
+    let url = f.get_nonkey(mat_id, FILE_URL_COL).unwrap_or(UNKNOWN_URL);
     Json(MaterialDescriptor{
-        id: key_id,
+        id: mat_id,
         name: name,
         url: url,
     })
+}
+
+#[get("/key/<mat_id>/<key_id>")]
+pub(crate) fn key_material<'a>(mat_id: i64, key_id: i64, db: State<MaterialsConfig>) -> String {
+    let fxk = db.file_keyword_pairs();
+    match fxk.insert(mat_id, key_id) {
+        Ok(_) => "Ok".to_string(),
+        Err(e) => e.msg.to_string(),
+    }
 }
 
 #[get("/search/<key_search>/<page_size>/<page_num>")]

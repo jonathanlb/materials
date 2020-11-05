@@ -2,6 +2,8 @@
 
 use normal::{IdPairs, Normal};
 #[macro_use] extern crate rocket;
+use rocket::http::Method;
+use rocket_cors::{AllowedHeaders, AllowedOrigins};
 
 const FILE_TAB: &str = "files";
 const FILE_COL: &str = "name";
@@ -83,7 +85,9 @@ use crate::keywords::{
 
 mod materials;
 use crate::materials::{
+    static_rocket_route_info_for_get_keywords,
     static_rocket_route_info_for_get_material,
+    static_rocket_route_info_for_key_material,
     static_rocket_route_info_for_search_materials,
     static_rocket_route_info_for_search_materials_by_keyword,
     static_rocket_route_info_for_search_materials_by_note
@@ -101,10 +105,22 @@ fn main() {
         db_file: "materials.sqlite"
     };
 
+    // XXX attaches CORS always.... TODO: configure
+    let allowed_origins = AllowedOrigins::some_exact(&["http://localhost:3000"]);
+    let cors = rocket_cors::CorsOptions {
+        allowed_origins,
+        allowed_methods: vec![Method::Get].into_iter().map(From::from).collect(),
+        allowed_headers: AllowedHeaders::some(&["Authorization", "Accept"]),
+        allow_credentials: true,
+        ..Default::default()
+    }
+    .to_cors().unwrap();
+
     rocket::ignite().
         manage(config).
         mount("/keyword", routes![get_keyword, search_keywords]).
-        mount("/material", routes![get_material, search_materials, search_materials_by_keyword, search_materials_by_note]).
+        mount("/material", routes![get_keywords, get_material, key_material, search_materials, search_materials_by_keyword, search_materials_by_note]).
         mount("/note", routes![get_note, search_notes, search_notes_by_keyword]).
+        attach(cors).
         launch();
 }
